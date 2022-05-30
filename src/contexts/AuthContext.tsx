@@ -1,37 +1,54 @@
 import { createContext, useContext, useEffect, useState } from "react";
+import { NextRouter, useRouter } from "next/router";
 
-type Jwt = {
-  authenticated: boolean;
-  toggle: Function;
-};
-
-type ChildrenProps = {
-  children: React.ReactNode;
-};
-
-const AuthContext = createContext<Jwt>({
-  authenticated: false,
-  toggle: () => {},
+const AuthContext = createContext({
+  authStatus: false,
+  authLoading: false,
+  authToggle: () => {},
 });
 
-function AuthProvider({ children }: ChildrenProps) {
-  const [jwt, setJwt] = useState("");
-  
-  const [authStatus, setAuthStatus] = useState(true);
+// What we need:
+// Non-flickering, loading screen assisted route guards
+// Redirection from /home to /login and vice-versa based on auth status
+// Site wide access to auth state and helper funcitons
+// Managing authorization states???
 
-  function toggleAuth() {
-    const newAuthStatus = !authStatus;
-    console.log(`Old: ${authStatus} and New: ${newAuthStatus}`);
-    setAuthStatus(newAuthStatus);
+function AuthProvider({ children }: ChildrenProps) {
+  const [jwt, setJwt] = useState<Jwt>({ token: "", validity: 0 });
+
+  const [authStatus, setAuthStatus] = useState<boolean>(false);
+  const [authLoading, setAuthLoading] = useState<boolean>(true);
+  const router: NextRouter = useRouter();
+
+  function authToggle() {
+    setAuthStatus(!authStatus);
   }
 
-  useEffect(() => {
-    // validateJWT
-    // setAuthenticated
-  }, [jwt]);
+  function checkAuth() {
+    setJwt({ token: "abc", validity: 3600 });
+  }
+
+  useEffect(
+    () => {
+      setTimeout(() => {
+        setAuthLoading(false);
+      }, 3600);
+      // validateJWT
+      // check localStorage
+      // JWT is valid
+    },
+    // authStatus depends on JWT
+    [authStatus]
+  );
 
   return (
-    <AuthContext.Provider value={{ authenticated: authStatus, toggle: toggleAuth }}>
+    <AuthContext.Provider
+      value={{
+        authStatus,
+        authLoading,
+        authToggle,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
@@ -46,5 +63,14 @@ function useAuth() {
   }
   return context;
 }
+
+type Jwt = {
+  token: string;
+  validity: number;
+};
+
+type ChildrenProps = {
+  children: React.ReactNode;
+};
 
 export { AuthProvider, useAuth };
